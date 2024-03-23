@@ -4,7 +4,12 @@
 #include <errno.h>
 #include <stdbool.h>
 
+#ifdef _WIN32
 #include "makedir.h"
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 typedef enum SDTtype_e{
     SDT_TYPE_1 = 0x0000,
@@ -103,6 +108,9 @@ typedef struct SDT_subfileHeader_s{
 typedef struct VAGhdr_s{            // All the values in this header must be big endian
         char id[4];                 // VAGp
         DWORD version;              // I guess it doesn't matter, so I'll place a 0 here and call it a day
+                                    // XXX: but it does matter, tools like es-ps2-vag-tool check this for
+                                    // correctness
+                                    // !XXX
         DWORD reserved;             // I guess it doesn't matter either
         DWORD dataSize;
         DWORD samplingFrequency;
@@ -114,7 +122,7 @@ typedef struct VAGhdr_s{            // All the values in this header must be big
 // global variables(used only inside this module)
 static VAGhdr_t VAGhdr = {
     {'V', 'A', 'G', 'p'},
-    0,
+    32,
     0,
     0,              // will be set for each entry later on
     0,              // as above
@@ -167,7 +175,11 @@ int main(int argc, char **argv){
         strcpy(path, argv[i]);
         currDirPtr = path + strlen(path) - 4;
         strcpy(currDirPtr, "_extracted/");
+#ifdef _WIN32
         makeDir(path);
+#else
+        mkdir(path, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP);
+#endif
         currDirPtr = currDirPtr + strlen(currDirPtr);
         currDirPtr[sizeof(((SDT_subfileHeader_t*)0)->fileName)] = '\0';
 
@@ -249,7 +261,7 @@ static bool extract_SDT1(FILE *in_fp){
 
     // allocate and read the array of subfiles' offsets
     if((subFilesOffsets = malloc(numFiles * sizeof(*subFilesOffsets))) == NULL){
-        fprintf(stderr, "\n\tCouldn't allocate %u bytes for %s's offsets array\n", numFiles * sizeof(*subFilesOffsets), path);
+        fprintf(stderr, "\n\tCouldn't allocate %zu bytes for %s's offsets array\n", numFiles * sizeof(*subFilesOffsets), path);
         return false;
     }
     fread(subFilesOffsets, sizeof(*subFilesOffsets), numFiles, in_fp);
@@ -296,14 +308,14 @@ static bool extract_SDT2(FILE *in_fp){
 
     // allocate and read the array of subfiles' offsets
     if((subFilesOffsets = malloc(numFiles * sizeof(*subFilesOffsets))) == NULL){
-        fprintf(stderr, "\n\tCouldn't allocate %u bytes for %s's offsets array\n", numFiles * sizeof(*subFilesOffsets), path);
+        fprintf(stderr, "\n\tCouldn't allocate %zu bytes for %s's offsets array\n", numFiles * sizeof(*subFilesOffsets), path);
         return false;
     }
     fread(subFilesOffsets, sizeof(*subFilesOffsets), numFiles, in_fp);
 
     // allocate and read the array of subfiles' headers
     if((SDT_subfileHeaderArr = malloc(numFiles * sizeof(*SDT_subfileHeaderArr))) == NULL){
-        fprintf(stderr, "\n\tCouldn't allocate %u bytes for %s's subfiles headers' array\n", numFiles * sizeof(*SDT_subfileHeaderArr), path);
+        fprintf(stderr, "\n\tCouldn't allocate %zu bytes for %s's subfiles headers' array\n", numFiles * sizeof(*SDT_subfileHeaderArr), path);
         free(subFilesOffsets);
         return false;
     }

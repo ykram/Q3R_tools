@@ -4,7 +4,12 @@
 #include <errno.h>
 #include <stdbool.h>
 
+#ifdef _WIN32
 #include "makedir.h"
+#else
+#include <sys/stat.h>
+#include <sys/types.h>
+#endif
 
 typedef unsigned char   BYTE;
 typedef unsigned short  WORD;
@@ -91,7 +96,7 @@ int main(int argc, char **argv){
 
     // load the data file into memory and close it
     if((linkfile_data = malloc(fileSize)) == NULL){
-        fprintf(stderr, "Couldn't allocate %u bytes for loading the file into memory\n", fileSize);
+        fprintf(stderr, "Couldn't allocate %zu bytes for loading the file into memory\n", fileSize);
         return 1;
     }
 
@@ -150,8 +155,11 @@ static void init_path(const char *linkfilePath){
     ++baseDirPtr;
 
     strcpy(baseDirPtr, "LINKFILE_extracted/");
+#ifdef _WIN32
     makeDir(path);
-
+#else
+    mkdir(path, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP);
+#endif
     /* make baseDirPtr point to the end of "LINKFILE_extracted/" string */
     baseDirPtr += strlen(baseDirPtr);
 }
@@ -183,7 +191,7 @@ static void extractCurrDir(dirDescriptor_t *dirDescriptor, char *currDirPtr){
             size_t bytes_read_out;
 
             if((outData = malloc(fileDescriptor[i].uncomprDataSize)) == NULL){
-                fprintf(stderr, "Couldn't allocate %u bytes to decompress entry %s\n", fileDescriptor[i].uncomprDataSize, path);
+                fprintf(stderr, "Couldn't allocate %zu bytes to decompress entry %s\n", fileDescriptor[i].uncomprDataSize, path);
                 exit(EXIT_FAILURE);
             }
 
@@ -211,7 +219,11 @@ static void extractCurrDir(dirDescriptor_t *dirDescriptor, char *currDirPtr){
     // recursively explore subdirectories
     for(i = 0; i < dirDescriptor->subDirDescrCount; ++i){
         int subDirNameLen = sprintf(currDirPtr, "%s/", linkfile_data + subDirDescriptor[i].subDirNameOffset);
+#ifdef _WIN32
         makeDir(path);
+#else:
+        mkdir(path, S_IRUSR|S_IWUSR|S_IXUSR|S_IRGRP|S_IXGRP);
+#endif
         extractCurrDir(linkfile_data + subDirDescriptor[i].subDirDescrOffset, currDirPtr + subDirNameLen);
     }
 }
