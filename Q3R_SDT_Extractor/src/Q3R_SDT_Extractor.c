@@ -122,11 +122,11 @@ typedef struct VAGhdr_s{            // All the values in this header must be big
 // global variables(used only inside this module)
 static VAGhdr_t VAGhdr = {
     {'V', 'A', 'G', 'p'},
-    32,
+    536870912,      // 32 flipped
     0,
     0,              // will be set for each entry later on
     0,              // as above
-    "Yagotzirck",   // Couldn't resist :)
+    "",
     ""              // will be set for each entry later on
 };
 
